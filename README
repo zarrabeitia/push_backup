@@ -1,0 +1,50 @@
+This is a very simple remote, incremental (push-)backup system based on rsync. At each run, it will upload the files to the remote server and take a snapshot.
+
+== Installation instructions.
+
+=== Backup server
+
+1) Install ssh and rsync. The server's filesystem should support hard linking of files (cp -l)
+2) Create a backup account (preferably non root)
+3) Configure the ssh daemon to accept public-key authentication for the backup account:
+3.1) use ssh-keygen to generate the public and private keys, if not created already
+3.2) append the public key to the backup_user@backup_server:~/.ssh/authorized_keys file. If you generated the key pair in the client system, you can copy it to the backup server with:
+     ssh-copy-id [-i identity_file] backup_user@backup_server
+4) Optional: disable password authentication on the backup server, or disable password authentication for the backup account.
+
+=== Client system
+
+1) Copy the push_backup.sh file to /usr/local/sbin/push_backup.sh. (Any place will do, but you will have to update the path in the crontab task and the test in step 5). Ensure it has +x permission.
+2) Copy the configuration folder to /usr/local/etc/push_backup/ (Any place will do, but you will have to update the path in the crontab task and the test in step 5). You can have more than one backup configuration 
+(if you think it may be useful). In that case, you will need to add a crontab entry for each configuration path. 
+3) Configure the backup system:
+3.1) include.lst
+    * This file contains the list of paths, one per line, that will be included in the backup. Every file or directory below those paths (recursively) will be backed up, as long as they are in the same filesystem.
+    * To backup multiple filesystems, add a path in each filesystem.
+    * You can add /home to the include.lst. In that case, every home directory will be backed up. You can also decide which users to back up, or you can let the users decide (see next step)
+3.2) vars
+     Configuration variables for this backup task. Currently:
+       * BACKUP_HOST=backup_user@backup_server
+       * BACKUP_PATH=path/to/the/backup/root/in/the/server
+       * PER_USER_CONFIG_DIR=path/to/config/dir
+       * AUTO_BACKUP_PER_USER_CONFIG=y
+     If the PER_USER_CONFIG_DIR is specified, this directory (relative to the user's homedir) will be scanned for 
+     per-user configuration options. This allows you to let the users decide which directories they want to back up.
+3.3) Per-user configuration directory
+    Currently it only checks for a file named include.lst.
+    If you didn't add /home to the global include.lst file, and want to allow the users to chose wether they want to be backed up or not (and what paths), add the PER_USER_CONFIG_DIR
+    directive to the variables above. The file "include.lst" in this directory, relative to the user home dir, may include additional files to back up.
+    As a security measure, all entries in the per-user include.lst are assumed to be relative to the user's home, and entries containing ".." will be ignored.
+    If you want to back up the per-user back-up configuration even if the user forgets to add it to his include.lst, add the AUTO_BACKUP_PER_USER_CONFIG=y to the global configuration variables.
+4) IMPORTANT: ensure that the global configurations files are not globally writable!
+5) You may try that the backups work. As root, execute
+   # /usr/local/sbin/push_backup.sh /usr/local/etc/push_backup
+   Several directories will be created in the backup server at the path specified by the global variables:
+   * current/rootfs: Latest backup. It may not be consistent if there is a backup in process.
+   * snapshots/DATE/rootfs: Past backups. The snapshots are created right after the backup is done, so you should see a snapshot for the backup you just made.
+   You can try again, to see if the snapshots are being created correctly:   
+    # /usr/local/sbin/push_backup.sh /usr/local/etc/push_backup    
+    (Now you should have two snapshots). If your filesystem hasn't changed much, the space occupied by the second snapshot will be negligible.
+6) Set up the cron task. You can run it daily. Make sure you run it as root. You can just copy the crontab/backup file provided to /etc/cron.d and fix the paths.
+
+
