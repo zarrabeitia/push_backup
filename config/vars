@@ -1,0 +1,4 @@
+BACKUP_HOST=username@backup.server
+BACKUP_DIR=path/to/the/backup/root
+PER_USER_CONFIG_DIR=.backup
+AUTO_BACKUP_PER_USER_CONFIG=n

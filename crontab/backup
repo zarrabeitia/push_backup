@@ -1,0 +1,3 @@
+# /etc/cron.d/backup: crontab entries for the backup process
+
+22 00    * * *   root	/usr/local/sbin/push_backup.sh /usr/local/etc/simple_backup >> /tmp/backup_log 
